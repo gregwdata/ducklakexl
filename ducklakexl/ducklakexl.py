@@ -1,5 +1,6 @@
 import duckdb
 import pandas as pd
+import numpy as np
 import os
 import asyncio
 import string
@@ -211,18 +212,22 @@ class DuckLakeXL():
 
 
     async def _request_with_retry(self, session: aiohttp.ClientSession, method: str, url: str, **kwargs) -> dict:
-        """Wrapper to handle 429 and respect Retry-After header"""
-        retry_for_404_limit = 5 # sometimes queries for ranges from the enpoint 404 it has't caught up to the sheet creation
+        """Wrapper to handle 429 and respect Retry-After header with exponential backoff for 404."""
+        retry_for_404_limit = 5  # sometimes queries for ranges from the endpoint 404 if it hasn't caught up to the sheet creation
         retries_for_404 = 0
         while True:
             async with session.request(method, url, **kwargs) as resp:
-                if (resp.status == 404) and (retries_for_404 < retry_for_404_limit):
+                if resp.status == 404 and retries_for_404 < retry_for_404_limit:
                     retries_for_404 += 1
-                    print(f'{retries_for_404 = }')
-                    await asyncio.sleep(1.0)
+                    # exponential backoff with jitter
+                    base_delay = 2 ** (retries_for_404 - 1)
+                    jitter = np.random.uniform(0, 1)
+                    delay = base_delay + jitter
+                    print(f'retries_for_404 = {retries_for_404}, sleeping for {delay:.2f} seconds')
+                    await asyncio.sleep(delay)
                 elif resp.status != 429:
                     resp.raise_for_status()
-                    return await resp.json(content_type=None) # sometimes we have no response body - ignore errors that would throw by setting content_type=None
+                    return await resp.json(content_type=None)  # sometimes we have no response body - ignore errors that would throw by setting content_type=None
                 else:
                     retry_after = int(resp.headers.get('Retry-After', '1'))
                     await asyncio.sleep(retry_after)
