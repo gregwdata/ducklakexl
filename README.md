@@ -1,4 +1,4 @@
-# ![](readme_images\ducklake_logo_white_small.png) DuckLakeXL
+# ![](readme_images/ducklake_logo_white_small.png) DuckLakeXL
 
 > [!CAUTION]
 > This package is based on taking a stupid idea way too far. It is not suited for production use, but may have some paedogogical utility. Or you may just find it fun to mess around with. It is slow, non-ACID, and all around silly. 
