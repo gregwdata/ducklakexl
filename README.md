@@ -88,7 +88,7 @@ No commitment is made that any of these actually get done. However, PRs are welc
 - [ ] Logging - use logger
 - [ ] On push, only write changed tables
     - Cache ducklake tables on pull, compare before push to identify changes
-    - More CDC/wal way to do it?
+    - More CDC/wal way to do it? Maybe take advantage of `ducklake_name.snapshots()` function
     - Just append instead of clear and write, where applicable
 - [ ] Meta-time-travel by leveraging file versions stored on OneDrive/SharePoint?
     - This could be a way to roll back on ACID-related issues above, if we fail mid-transaction

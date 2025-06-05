@@ -6,6 +6,8 @@ import asyncio
 import string
 import requests
 import aiohttp
+import openpyxl
+import tempfile
 
 
 class DuckLakeXL():
@@ -61,7 +63,10 @@ class DuckLakeXL():
         """based on the excel_path string, decide if we are using a local excel, onedrive, or sharepoint"""
         
         # initial implementation is onedrive only. later, will look at self.excel_path to detect
-        self.client_type = 'onedrive'
+        if self.excel_path.endswith('.xlsx') and not self.excel_path.startswith('https://'):
+            self.client_type = 'excel'
+        else:
+            self.client_type = 'onedrive'
 
 
     def _acquire_token(self):
@@ -144,8 +149,11 @@ class DuckLakeXL():
             else:
                 self.ssl_context = ssl.create_default_context()
 
+        elif self.client_type == 'excel':
+            pass # nothing needed here - may need separate client initialization for fsspec files
+
         else:
-            raise NotImplementedError("Only OneDrive client type is currently supported")
+            raise NotImplementedError("Only OneDrive and Excel client types are currently supported")
         
 
     def _initialize_ducklake(self):
@@ -187,6 +195,26 @@ class DuckLakeXL():
 
             # close the workbook session
             self.loop.run_until_complete(self._close_workbook_session(session_id))
+
+        elif self.client_type == 'excel':
+            # check if all sheets are present that need to be:
+            with pd.ExcelFile(self.excel_path) as f:
+                remote_sheetnames = f.sheet_names
+
+            all_sheets_exist_already = True # flag whether or not we start with a pull (if True) or a push (if False)
+            for t in self.catalog_tables_no_ducklake:
+                if t in remote_sheetnames:
+                    continue
+                else:
+                    all_sheets_exist_already = False
+            
+            if all_sheets_exist_already:
+                # initialize state from the remote catalog
+                # for now, this will error if the sheets exist but no column headers in sheet
+                self._pull()
+            else:
+                # reset the remote to match the state of the local
+                self._push()
 
         else:
             raise NotImplementedError("Only OneDrive client type is currently supported")
@@ -298,8 +326,14 @@ class DuckLakeXL():
         if self.client_type == 'onedrive':
             # Run async get for all tables
             metadata_to_write = self.loop.run_until_complete(self._session_pull_all(table_dtype_map))
+        elif self.client_type == 'excel':
+            metadata_to_write = {}
+            with pd.ExcelFile(self.excel_path) as f:
+                for t,dtypes in table_dtype_map.item():
+                    # note we are iterating over sheets to pass a separate dtype dict for each sheet. May get small perf lift from reading all at once, if all cols with same name have same dtype
+                    metadata_to_write[t] = pd.read_excel(f,sheet_name=t,dtype=dtypes)
         else:
-            raise NotImplementedError("Only OneDrive client type is currently supported")
+            raise NotImplementedError("Only OneDrive and Excel client types are currently supported")
 
         # write each table to the ducklake tables in DuckDB
         for t, df in metadata_to_write.items():
@@ -373,8 +407,13 @@ class DuckLakeXL():
         if self.client_type == 'onedrive':
             # Run async push for all tables
             self.loop.run_until_complete(self._session_push_all(table_df_map))
+        elif self.client_type == 'excel':
+            # TODO: mode 'a' doesn't work with fsspec files - need separate handling for excel via fsspec
+            with pd.ExcelWriter(self.excel_path, engine='openpyxl', mode='a',if_sheet_exists='replace') as writer:
+                for t,t_df in table_df_map.items():
+                    t_df.to_excel(writer, sheet_name=t, index=False)
         else:
-            raise NotImplementedError("Only OneDrive client type is currently supported")
+            raise NotImplementedError("Only OneDrive and Excel client types are currently supported")
 
 
     async def _session_push_all(self, table_df_map):
@@ -422,6 +461,54 @@ class DuckLakeXL():
         headers_patch['Content-Type'] = 'application/json' # add content type
         patch_resp = await self._request_with_retry(session, 'patch', url, headers=headers_patch, json=body)
         #print(f"Pushed {t}")         
+
+
+    def _create_onedrive_workbook(self, fname: str, folder_path: str = None) -> None:
+        """Create a new workbook on OneDrive with the given filename
+        Since the Graph API doesn't currently support creating an empty xlsx file,
+        create an empty xlsx locally, then upload it.
+
+        folder path will be with respect to the root folder of the drive ID specified
+        """
+
+        # create a blank excel file
+        wb = openpyxl.Workbook()
+        default_sheet = wb.active
+        wb.remove(default_sheet)
+        with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+            tmp_path = tmp.name
+            wb.save(tmp_path)
+
+        # upload using graph api
+        with open(tmp_path, "rb") as f:
+            response = self.loop.run_until_complete(self._async_create_file(fname,folder_path,f))
+
+        if response:
+            print(f"Workbook {fname} created successfully.")
+
+            # the driveid + file ID becomes the excel_path
+            print(response)
+            self.item_id = response['id']
+
+        else:
+            print(f"Failed to create workbook {fname}: {response.text}")
+
+
+    async def _async_create_file(self,fname,folder_path,f):
+        headers = self._acquire_token()
+        if folder_path:
+            upload_url = f"https://graph.microsoft.com/v1.0/drives/{self.drive_id}/root:/{remote_folder_path.rstrip('/')}/{fname}:/content"
+        else:
+            upload_url = f"https://graph.microsoft.com/v1.0/drives/{self.drive_id}/root:/{fname}:/content"
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self.ssl_context, force_close=True)) as session:
+            response = await self._request_with_retry(
+                session, 'put',
+                upload_url,
+                headers=headers,
+                data=f
+            )
+
+        return response
 
 
 if __name__ == '__main__':
