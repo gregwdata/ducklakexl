@@ -73,7 +73,7 @@ You need to register an app with Entra ID in your (organization's) Azure Portal.
 
 No commitment is made that any of these actually get done. However, PRs are welcome.
 
-- [ ] Local `xlsx` file
+- [x] Local `xlsx` file
 - [x] OneDrive
 - [x] OneDrive API calls async-ify
 - [ ] Make it ACID (one-drive)?
