@@ -184,24 +184,27 @@ class DuckLakeXL():
         # check if file already exists
         #if not, create it
 
+        self.item_id = None
         if not self.drive_id:
             if '!' in self.excel_path:
                 # excel path of form {drive_id}!{item-specific-part}
                 self.drive_id = self.excel_path.split('!')[0]
+                self.item_id = self.excel_path
             else:
                 raise ValueError("drive_id must be specified for OneDrive mode")
-        # Attempt to get the item ID
-        try:
-            item_info = self.loop.run_until_complete(self._get_onedrive_item(self.excel_path,self.folder_path))
-            self.item_id = item_info.get('id')
-        except FileNotFoundError:
-            if self.create_if_missing:
-                # Create workbook if missing
-                self._create_onedrive_workbook(self.excel_path, self.folder_path)
-                # _create_onedrive_workbook sets self.item_id
-            else:
-                error_message = f"File '{self.excel_path}' not found on OneDrive and create_if_missing=False"
-                raise FileNotFoundError(error_message)
+        # Attempt to get the item ID of an existing file, if excel_path wasn't specified with item ID to begin with
+        if not self.item_id:
+            try:
+                item_info = self.loop.run_until_complete(self._get_onedrive_item(self.excel_path,self.folder_path))
+                self.item_id = item_info.get('id')
+            except FileNotFoundError:
+                if self.create_if_missing:
+                    # Create workbook if missing
+                    self._create_onedrive_workbook(self.excel_path, self.folder_path)
+                    # _create_onedrive_workbook sets self.item_id
+                else:
+                    error_message = f"File '{self.excel_path}' not found on OneDrive and create_if_missing=False"
+                    raise FileNotFoundError(error_message)
             
 
     async def _get_onedrive_item(self, fname: str, folder_path: str | None = None) -> dict:
@@ -739,7 +742,26 @@ def test_excel():
     print('Excel test complete!')
 
 
+def test_onedrive_existing_file():
+    import time
+    from datetime import datetime
+    from dotenv import load_dotenv
+    load_dotenv()
+    MY_TEST_ONEDRIVE_PATH = os.getenv('MY_TEST_ONEDRIVE_PATH')
+    print('creating test instance:')
+    time_string = datetime.now().strftime('%Y-%m-%d_%H-%M-%S') 
+    ducklake_file = f'ducklake_test_{time_string}.ducklake'
+    start_time = time.time()
+    test = DuckLakeXL(
+        excel_path=MY_TEST_ONEDRIVE_PATH,
+        data_path='../test/',
+        ducklake_name='my_excel_ducklake',
+        local_catalog=ducklake_file,
+    )
+    print(f'Initialization took {time.time() - start_time:.2f} seconds')
+
 
 if __name__ == '__main__':
     test_excel()
     test_onedrive()
+    test_onedrive_existing_file()
