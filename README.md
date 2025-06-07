@@ -29,7 +29,15 @@ In a world of single-user, using a local Excel file, where we got lucky and noth
 
 ## Usage
 
-So far, it is only implemented and tested against OneDrive. Other modalities coming soon.
+### Local Excel Files
+
+If the input to `excel_path` is a string ending in `.xlsx` and `drive_id` is not specified, DuckLakeXL will treat that as a local excel file (which could also be on a network share that you have read/write permission on).
+
+If the specified file does not exist, DuckLakeXL will attempt to create it.
+
+If it already exists, DuckLakeXL will check for existing sheets that correspond to the names of DuckLake metadata tables. If all are present, the DuckLake is initialized with the values from those tables. (Note that it does not check validity of the data in the sheets, or presents of headers - only sheetnames. Errors will result if no headers present, or data on the sheets are otherwise misaligned to the schema of the ducklake metadata tables.)
+
+Since Excel maintains a lock on a `.xlsx` file when it is open, the file must be closed for DuckLakeXL to use it. You can open the file after a query to see the query's effects on the metadata.
 
 ```python
 # if running from a Jupyter session, you may need to run these two lines invoking nest_asyncio
@@ -41,7 +49,7 @@ from ducklakexl import DuckLakeXL
 
 # Create a DuckLakeXL instance
 db = DuckLakeXL(
-    excel_path=MY_ONEDRIVE_PATH,
+    excel_path='/path/to/local/or/network/file.xlsx',
     data_path='/path/to/local/or/network/directory/',
     ducklake_name='my_excel_ducklake',
 )
@@ -59,9 +67,49 @@ db.sql("""SELECT * FROM my_table""").show()
 my_df = db.sql("""SELECT * FROM my_table""").df()
 ```
 
-For personal OneDrive usage, the `MY_ONEDRIVE_PATH` parameter should be a string of the form  `A123456789ABCDEF!s0123456789abcdef0123456789abcdef`. You can find this identifier by opening your Excel file in the browser in OneDrive, and looking up the `resid` parameter, as in: `https://onedrive.live.com/personal/a123456789abcdef/_layouts/15/Doc.aspx?resid=`**`A123456789ABCDEF!s0123456789abcdef0123456789abcdef`**`&cid=a123456789abcdef&migratedtospo=true&app=Excel` 
+### OneDrive
 
-When implemented, details for `excel_path` inputs that auto-detect and connect to the appropriate source will be added here.
+Other than the initialization of the `DuckLakeXL` object shown below, usage on OneDrive is the same as local Excel files. Refer to the example usage and imports above.
+
+One bonus with using Excel files on OneDrive: you can keep the workbook open, in browser or in the local Excel app, and DuckLakeXL can still read from and write to it!
+
+If you already have an excel file in OneDrive that you want to use, there are two ways to reference it:
+- using the OneDrive `item id` you can find by opening the file in OneDrive and looking at the URL's `resid` query parameter, as in:
+`https://onedrive.live.com/personal/a123456789abcdef/_layouts/15/Doc.aspx?resid=`**`A123456789ABCDEF!s0123456789abcdef0123456789abcdef`**`&cid=a123456789abcdef&migratedtospo=true&app=Excel` 
+    ```python
+    # Create a DuckLakeXL instance using the "resid"
+    db = DuckLakeXL(
+        excel_path='A123456789ABCDEF!s0123456789abcdef0123456789abcdef',
+        data_path='/path/to/local/or/network/directory/',
+        ducklake_name='my_excel_ducklake',
+    )
+    ```
+
+- Setting the `drive_id` parameter to the drive id obtained from the OneDrive URL (`A123456789ABCDEF` in the above, not case sensitive) and setting the `excel_path` parameter to the name of the Excel file, as in the below. Optionally, you can specify a `folder_path` if the file is not at the root of the specified drive.
+    ```python
+    # Create a DuckLakeXL instance using a OneDrive file specified by name
+    db = DuckLakeXL(
+        excel_path='my_onedrive_excel_file.xlsx',
+        data_path='/path/to/local/or/network/directory/',
+        ducklake_name='my_excel_ducklake',
+        drive_id='A123456789ABCDEF',
+        folder_path='foldername/subfolder'
+    )
+    ```
+
+The above will throw an exception if the file does not exist. If you want to create a new OneDrive Excel file as a DuckLakeXL metadata store on initialization, you can specifiy the name of a file that does not exist, and set `create_if_missing = True`. The file will be created.
+
+```python
+# Create a DuckLakeXL instance by creating a new OneDrive file, specified by name
+db = DuckLakeXL(
+    excel_path='my_onedrive_excel_fil_that_does_not_exist_yet.xlsx',
+    data_path='/path/to/local/or/network/directory/',
+    ducklake_name='my_excel_ducklake',
+    drive_id='A123456789ABCDEF',
+    folder_path='foldername/subfolder',
+    create_if_missing=True
+)
+```
 
 ### OneDrive/SharePoint Setup
 
