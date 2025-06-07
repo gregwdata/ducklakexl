@@ -133,9 +133,6 @@ class DuckLakeXL():
     def _initialize_client(self):
         
         if self.client_type == 'onedrive':
-            # from msgraph import GraphServiceClient
-            # from azure.identity import InteractiveBrowserCredential, TokenCachePersistenceOptions
-
             import msal
             import requests
 

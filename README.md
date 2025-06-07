@@ -1,11 +1,11 @@
-# ![](readme_images/ducklake_logo_white_small.png) DuckLakeXL
+# ![](https://github.com/gregwdata/ducklakexl/raw/main/readme_images/ducklake_logo_white_small.png) DuckLakeXL
 
 > [!CAUTION]
 > This package is based on taking a stupid idea way too far. It is not suited for production use, but may have some paedogogical utility. Or you may just find it fun to mess around with. It is slow, non-ACID, and all around silly. 
 
 This package allows the use of Excel (as a local file or on OneDrive/SharePoint) as a catalog database for [DuckLake](https://ducklake.select/), using the [ducklake extension](https://duckdb.org/docs/stable/core_extensions/ducklake) in DuckDB.
 
-![alt text](readme_images/ducklakeXL_insert_into_table_2.gif)
+![Screen recording showing DuckLakeXL query based on the catalog shown in both OneDrive web UI and via the Excel App, along with the parquet files landing in the file store.](https://github.com/gregwdata/ducklakexl/raw/main/readme_images/ducklakeXL_insert_into_table_3view.gif)
 
 ## Why???
 
@@ -28,6 +28,18 @@ Is this a robust and reliable approach? No way! Is it a practical way to persist
 In a world of single-user, using a local Excel file, where we got lucky and nothing ever failed mid-transaction, this would give you a reasonably reliable method. When we get into multiple HTTP requests against OneDrive or Sharepoint that need to all succeed to maintain valid state... things start to get iffy. When we then consider multiple users potentially running concurrent operations against a OneDrive/Sharepoint remote, that opens up all the concurrency and conflict management problems that DuckLake solves by usnig a real DBMS with transactional behavior, like PostgreSQL, that are designed around those kind of problems. While it would be a waste of time and effort to fully solve them for this project, there are probably ways to nibble around the edges and make it incrementally more capable of (but let's remember, not well-suited for!) this kind of usage over time. 
 
 ## Usage
+
+### Installation
+
+Install from PyPI using
+
+    pip install ducklakexl
+
+or
+
+    uv add ducklakexl
+
+Alternatively, clone this repo and customize!
 
 ### Local Excel Files
 
