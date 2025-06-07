@@ -123,9 +123,9 @@ Here are approximate steps to follow to set up API access for a personal OneDriv
 4. Click `+` to create a new registration. 
     1. Give it a meaningful name. 
     2. For `Supported account types`, the current configuration of DuckLakeXL is set up and tested based on selecting `Personal Microsoft accounts only`. Adding and testing the ability to authenticate via an organizational tenant may come at some point in the future.
-    3. For redict URI, select `Mobile and desktop applications`, select the red and enter `http://localhost`
+    3. For redict URI, select `Public Client / Native`, and enter `http://localhost` for redirect URI
 5. On the `Authentication` page, ensure that `Access tokens` is selected under the heading Implicit grant and hybrid flows heading.
-6. On the `API Permissions` page, add the following Microsoft Graph permissions: `Files.ReadWrite`, `User.Read`, and optionally `Files.ReadWrite.All`. This last one will allow DuckLakeXL to use files that others own and have shared with you. Its use is toggled with the DuckLakeXL initialization parameter `read_shared_files`.
+6. On the `API Permissions` page, add the following Microsoft Graph permissions: `Files.ReadWrite`, `User.Read`, `profile`, `offline_access`, and optionally `Files.ReadWrite.All`. This last one will allow DuckLakeXL to use files that others own and have shared with you. Its use is toggled with the DuckLakeXL initialization parameter `read_shared_files`.
 7. Record the Application (client) ID from the `Overview` page. DuckLakeXL expects this value to either be stored in an environment variable called `CLIENT_ID` or saved as such in a `.env` file in the path of your Python script.
 
 ## TODOs

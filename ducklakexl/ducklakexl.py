@@ -767,6 +767,6 @@ def test_onedrive_existing_file():
 
 
 if __name__ == '__main__':
-    #test_excel()
+    test_excel()
     test_onedrive()
     test_onedrive_existing_file()
