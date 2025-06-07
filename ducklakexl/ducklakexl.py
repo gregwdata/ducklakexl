@@ -24,7 +24,8 @@ class DuckLakeXL():
                  custom_cert_store = 'certifi',
                  create_if_missing: bool = False,
                  folder_path: str | None = None,
-                 drive_id: str | None = None
+                 drive_id: str | None = None,
+                 read_shared_files: bool = False
                  ):
         """
         Initialize DuckLakeXL instance.
@@ -42,6 +43,7 @@ class DuckLakeXL():
             create_if_missing (bool, optional): If True and using OneDrive, will create a new workbook with the name specified by excel_path in the given folder_path. Defaults to False.
             folder_path (str, optional): Folder path on OneDrive where the workbook should be created (relative to the root of the drive). Only used if create_if_missing is True.
             drive_id (str, optional): The OneDrive drive ID where the workbook is located or should be created. Must be specified for OneDrive/SharePoint mode.
+            read_shared_files (bool, optional): If true, OneDrive API requests will use the files.readwrite.all scope, and have access to your files AND files shared with you. If false (default), it just uses files.readwrite scope, which can only access your files.
 
         Notes:
             - For OneDrive/SharePoint mode, you must specify both excel_path (the file name you want to see on OneDrive) and drive_id.
@@ -58,6 +60,7 @@ class DuckLakeXL():
         self.drive_id = drive_id
         self.create_if_missing = create_if_missing
         self.folder_path = folder_path
+        self.read_shared_files = read_shared_files
         self._pick_client()
 
         # the MSGraph sdk is all async coroutines - for initial simplicity, keep this class all sync
@@ -150,6 +153,8 @@ class DuckLakeXL():
             # Define your application (client) ID and the scopes required
             client_id = CLIENT_ID
             scopes = ['Files.ReadWrite', 'User.Read']  # Add other scopes as needed
+            if self.read_shared_files:
+                scopes.append('Files.ReadWrite.All')
             self.scopes = scopes
             self.username = None # initialize to None and update on first login - only used to maintain in-memory token cache
 
@@ -762,6 +767,6 @@ def test_onedrive_existing_file():
 
 
 if __name__ == '__main__':
-    test_excel()
+    #test_excel()
     test_onedrive()
     test_onedrive_existing_file()
