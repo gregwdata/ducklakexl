@@ -1,6 +1,6 @@
 [project]
 name = "ducklakexl"
-version = "0.1.1"
+version = "0.1.2"
 description = "Use Excel as a metadata catalog for DuckLake"
 readme = "README.md"
 authors = [
