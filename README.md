@@ -169,4 +169,4 @@ No commitment is made that any of these actually get done. However, PRs are welc
     - Probably not via Graph API
 - [ ] Tests
 - [ ] CI/CD
-- [ ] Publish to pypi?
+- [x] Publish to pypi?
