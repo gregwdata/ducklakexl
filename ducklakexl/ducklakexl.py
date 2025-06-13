@@ -435,8 +435,7 @@ class DuckLakeXL():
                     # hit until version 3.0 of pandas: https://github.com/pandas-dev/pandas/pull/58994 
                     # hence this awkward workaround where we read as strings and coerce back to bool later
                     bool_cols = [k for k in dtypes.keys() if dtypes[k]=='bool']
-                    dtypes = dtypes.replace({'bool' : pd.StringDtype.name}) 
-            
+                    dtypes = dtypes.replace({'bool' : 'object'}) 
                     metadata_to_write[t] = pd.read_excel(f,sheet_name=t,dtype=dict(dtypes))
 
                     # continuing our awkward boolean workaround:
